@@ -14,11 +14,13 @@ sub run {
     my $username;
     my $email;
     my $profile = 'Default';
+    my $ci = 'Travis';
     parse_options(
         \@args,
         'username=s' => \$username,
         'email=s'    => \$email,
         'p|profile=s' => \$profile,
+        'ci=s' => \$ci,
     );
 
     my $module = shift @args or errorf("Missing module name\n");
@@ -54,6 +56,12 @@ sub run {
 
     my $author = $username;
 
+    $ci = do {
+        my $ci_class = "Minilla::Profile::CI::${ci}";
+        eval "require $ci_class; 1;" or die $@;
+        $ci_class->new;
+    };
+
     my $profile_klass = "Minilla::Profile::${profile}";
     eval "require $profile_klass; 1;" or die $@;
     my $skelton = $profile_klass->new(
@@ -64,6 +72,7 @@ sub run {
         module  => $module,
         version => $version,
         email   => $email,
+        ci      => $ci,
     );
     {
         mkpath($dist);

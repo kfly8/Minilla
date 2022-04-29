@@ -2,16 +2,10 @@ package Minilla::Profile::Base;
 use strict;
 use warnings;
 use utf8;
-use File::Spec::Functions qw(catfile);
-use File::Path qw(mkpath);
-use File::Basename qw(dirname);
-use Data::Section::Simple;
 use Time::Piece;
 
-use Minilla::Util qw(spew_raw);
-use Minilla::Logger;
-
 use Moo;
+with 'Minilla::Profile::Renderer';
 
 has [qw(dist path module)] => (
     is       => 'ro',
@@ -31,6 +25,14 @@ has suffix => (
 has [qw(email author)] => (
     is => 'lazy',
     required => 1,
+);
+
+has ci => (
+    is => 'lazy',
+    default => sub {
+        require Minilla::Profile::CI::Travis;
+        Minilla::Profile::CI::Travis->new;
+    },
 );
 
 no Moo;
@@ -92,34 +94,6 @@ sub end { '__END__' }
 
 sub module_pm_src { '' }
 
-sub render {
-    my ($self, $tmplname, $dst) = @_;
-    my $path = $dst || $tmplname;
-
-    infof("Writing %s\n", $path);
-    mkpath(dirname($path));
-
-    for my $pkg (@{mro::get_linear_isa(ref $self || $self)}) {
-        my $content = Data::Section::Simple->new($pkg)->get_data_section($tmplname);
-        next unless defined $content;
-        $content =~ s!<%\s*\$([a-z_]+)\s*%>!
-            $self->$1()
-        !ge;
-        spew_raw($path, $content);
-        return;
-    }
-    errorf("Cannot find template for %s\n", $tmplname);
-}
-
-sub write_file {
-    my ($self, $path, $content) = @_;
-
-    infof("Writing %s\n", $path);
-    mkpath(dirname($path));
-    spew_raw($path, $content);
-}
-
-
 1;
 __DATA__
 
@@ -172,22 +146,6 @@ it under the same terms as Perl itself.
 <% $author %> E<lt><% $email %>E<gt>
 
 =cut
-
-@@ .travis.yml
-language: perl
-matrix:
-  include:
-    - perl: "5.12"
-      dist: trusty
-    - perl: "5.14"
-    - perl: "5.16"
-    - perl: "5.18"
-    - perl: "5.20"
-    - perl: "5.22"
-    - perl: "5.24"
-    - perl: "5.26"
-    - perl: "5.28"
-    - perl: "5.30"
 
 @@ Changes
 Revision history for Perl extension <% $dist %>

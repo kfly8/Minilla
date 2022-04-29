@@ -21,7 +21,7 @@ sub generate {
 
     $self->render('Changes');
     $self->render('t/00_compile.t');
-    $self->render('.travis.yml');
+    $self->ci->generate;
 
     $self->render('.gitignore');
     $self->write_file('LICENSE', Minilla::License::Perl_5->new(
